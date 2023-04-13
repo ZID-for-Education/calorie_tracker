@@ -1,3 +1,4 @@
+import sys
 from flask import Flask, request, redirect, render_template, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -74,7 +75,108 @@ class Exercise(db.Model):
     def __repr__(self):
         return '<Name %r>' % self.name
 
-
+def date_string_to_float(date_string):
+    date = datetime.strptime(date_string, '%Y-%m-%d')
+    return date.timestamp()
+class FoodDiary:
+    def __init__(self, diary_list):
+        self.diary_list = diary_list
+    
+    def average(self):
+        total = 0
+        for diary in self.diary_list:
+            total += diary[0]
+        return total / len(self.diary_list)
+    
+    def average_over_time(self, timeBegin, timeEnd):
+        total = 0
+        count = 0
+        for diary in self.diary_list:
+            if diary[1] >= timeBegin and diary[1] <= timeEnd:
+                total += diary[0]
+                count += 1
+        return total / count
+    
+    def total(self):
+        total = 0
+        for diary in self.diary_list:
+            total += diary[0]
+        return total
+    
+    def total_over_time(self, timeBegin, timeEnd):
+        total = 0
+        for diary in self.diary_list:
+            if diary[1] >= timeBegin and diary[1] <= timeEnd:
+                total += diary[0]
+        return total
+    
+    def max(self):
+        max = 0
+        for diary in self.diary_list:
+            if diary[0] > max:
+                max = diary[0]
+        return max
+    
+    def max_over_time(self, timeBegin, timeEnd):
+        max = 0
+        for diary in self.diary_list:
+            if diary[1] >= timeBegin and diary[1] <= timeEnd:
+                if diary[0] > max:
+                    max = diary[0]
+        return max
+    
+    def min(self):
+        min = sys.maxint
+        for diary in self.diary_list:
+            if diary[0] < min:
+                min = diary[0]
+        return min
+    
+    def min_over_time(self, timeBegin, timeEnd):
+        min = sys.maxint
+        for diary in self.diary_list:
+            if diary[1] >= timeBegin and diary[1] <= timeEnd:
+                if diary[0] < min:
+                    min = diary[0]
+        return min
+    
+    def count(self):
+        return len(self.diary_list)
+    
+    def count_over_time(self, timeBegin, timeEnd):
+        count = 0
+        for diary in self.diary_list:
+            if diary[1] >= timeBegin and diary[1] <= timeEnd:
+                count += 1
+        return count
+    
+    def get_diary_list(self):
+        return self.diary_list
+    
+    def get_diary_list_over_time(self, timeBegin, timeEnd):
+        diary_list = []
+        for diary in self.diary_list:
+            if diary[1] >= timeBegin and diary[1] <= timeEnd:
+                diary_list.append(diary)
+        return diary_list
+    
+    def get_diary_data_over_time(self, timeBegin, timeEnd):
+        max = self.max_over_time(timeBegin, timeEnd)
+        min = self.min_over_time(timeBegin, timeEnd)
+        average = self.average_over_time(timeBegin, timeEnd)
+        total = self.total_over_time(timeBegin, timeEnd)
+        count = self.count_over_time(timeBegin, timeEnd)
+        return [max, min, average, total, count]
+    
+    def get_diary_data(self):
+        max = self.max()
+        min = self.min()
+        average = self.average()
+        total = self.total()
+        count = self.count()
+        return [max, min, average, total, count]
+    
+    
 with app.app_context():
     db.create_all()
   
