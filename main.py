@@ -1,6 +1,7 @@
 import sys
 from flask import Flask, request, redirect, render_template, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc
 from datetime import datetime
 import json
 
@@ -232,19 +233,30 @@ def register_controller():
             
 @app.route("/<username>/profile") 
 def profile(username=None): 
-    
     if request.method == "POST":
-        return render_template("caloriePage.html", username=username)
+        return redirect(url_for('diary', username=username))
     else:
         return render_template("caloriePage.html", username=username)
  
-@app.route('/getdiarydata')
-def get_diary_data(username=None):
-    diaries = diary.query.filter_by(user=username).all()
-    diary_data = {}
-    for diary in diaries:
-        diary_data.update({diary.date : diary.calories})
-    return json.dumps(diary_data)
+@app.route('/<username>/getdiarydata')
+def get_diary_data(username=None, methods=["GET"]):
+    user = User.query.filter_by(username=username).first() #get user from the database
+    diary_list = db.session.execute(db.select([diary.date]).where(diary.user == username)).scalars().all() #get all the dates when the user has made an entry, username are unique
+    diary_list = [datetime.strptime(date_str, '%Y-%m-%d') for date_str in diary_list]
+    diary_list = list(set(diary_list))
+    diary_list.sort()
+    diary_list = [datetime.strftime(date_obj, '%Y-%m-%d') for date_obj in diary_list]
+    calorie_list = [] #list of tuples (calories, date)
+    for i in range(len(diary_list)): #for each date
+        calorie_entry = db.session.execute(db.select([diary.calorie]).where(diary.date == diary_list[i], diary.user == user.username)).scalars().all() #get all the calories for that date
+        calorie_sum = 0 #sum of calories for that date
+        for j in range(len(calorie_entry)): #for each calorie entry
+            calorie_sum += float(calorie_entry[j]) #add it to the sum
+        calorie_sum=round(calorie_sum,2) 
+        newdate = datetime.strptime(diary_list[i], "%Y-%m-%d").strftime("%m-%d-%Y")
+        calorie_list.append((newdate, calorie_sum)) #add the sum and the date to the list
+    
+    return json.dumps(calorie_list)
 
 @app.route("/logout/") 
 def unlogger(): 
@@ -310,8 +322,8 @@ def sub_record(username=None):
             exercise = exercise_l_ent.split(" ")[0] #get the exercise name
             calorie0 = db.session.execute(db.select([Exercise.calories]).where(Exercise.name == exercise)).scalars().first()
 
-        calorie1 = str(float(calorie0) * float(amount))
-
+        calorie1 = str(-(float(calorie0) * float(amount)))
+        print(calorie1)
         if flag == 0: #if the dropdown menu was not used
             diary_entry = diary(user=username, calorie=calorie1, date=date)
             exercise_entry = Exercise(name=exercise, calories=calorie0, userID=user.id) #add the exercise to the database
@@ -330,13 +342,17 @@ def sub_record(username=None):
 def diary_entry(username=None):
     user = User.query.filter_by(username=username).first() #get user from the database
     diary_list = db.session.execute(db.select([diary.date]).where(diary.user == username)).scalars().all() #get all the dates when the user has made an entry, username are unique
-    diary_list = list(set(diary_list)) #remove duplicates
+    diary_list = [datetime.strptime(date_str, '%Y-%m-%d') for date_str in diary_list]
+    diary_list = list(set(diary_list))
+    diary_list.sort(reverse=True)
+    diary_list = [datetime.strftime(date_obj, '%Y-%m-%d') for date_obj in diary_list]
     calorie_list = [] #list of tuples (calories, date)
     for i in range(len(diary_list)): #for each date
         calorie_entry = db.session.execute(db.select([diary.calorie]).where(diary.date == diary_list[i], diary.user == user.username)).scalars().all() #get all the calories for that date
         calorie_sum = 0 #sum of calories for that date
         for j in range(len(calorie_entry)): #for each calorie entry
             calorie_sum += float(calorie_entry[j]) #add it to the sum
+        calorie_sum=round(calorie_sum,2)
         calorie_list.append((calorie_sum, diary_list[i])) #add the sum and the date to the list
     
     return render_template("diary.html", username=username, records=calorie_list)
