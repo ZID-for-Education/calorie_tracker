@@ -281,7 +281,7 @@ def add_record(username=None):
 
         if food_l_ent != "0": # if dropdown is selected
             flag = 1 # set flag to 1
-            food = food_l_ent.split(" ")[0] # get food name
+            food = " ".join(food_l_ent.split(" ")[:-1]) # get food name
             calorie0 = db.session.execute(db.select([Food.calories]).where(Food.name == food)).scalars().first() # get calorie
 
         calorie1 = str(float(calorie0) * float(amount) / 100) # calculate calorie
@@ -319,7 +319,7 @@ def sub_record(username=None):
 
         if exercise_l_ent != "0": #if the dropdown menu was used
             flag = 1
-            exercise = exercise_l_ent.split(" ")[0] #get the exercise name
+            exercise = " ".join(exercise_l_ent.split(" ")[:-1]) #get the exercise name
             calorie0 = db.session.execute(db.select([Exercise.calories]).where(Exercise.name == exercise)).scalars().first()
 
         calorie1 = str(-(float(calorie0) * float(amount)))
